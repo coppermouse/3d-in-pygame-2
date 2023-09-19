@@ -51,7 +51,7 @@ async def main():
 
     screen = pygame.display.set_mode( (screen_side_size,)*2 )
     clock = pygame.time.Clock()
-    fps = 60
+    fps = 600
 
     pygame.font.init()
     font = pygame.font.SysFont("",24)
@@ -62,7 +62,7 @@ async def main():
     field = list()
     for x in range( world.get_size()[0] + 1 ):
         for y in range( world.get_size()[1] + 1 ):
-            field.append( ( x, y, -5 + random.randrange(0,2) ))
+            field.append( ( x, y, -6 + random.randrange(0,1) ))
     field = np.array( field )
     assert field.dtype == np.int64
     # ---

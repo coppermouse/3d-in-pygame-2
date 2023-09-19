@@ -9,24 +9,49 @@ clock = pygame.time.Clock()
 running = True
 
 world = pygame.image.load('world.png')
+height = pygame.image.load('height.png')
 
 # setup points (n, 3), every 4-th point is a new polygon
-points = list()
+polygons = list()
 colors = list()
 f = 0.01
 for x in range(32):
     for y in range(32):
         colors.append( world.get_at( (x,y) ))
+        z = (height.get_at((x,y)).r)//16
+
+        z -= 18
+
+        polygon = list()
+        polygons.append(polygon)
         for dx, dy in [(0,0),(1,0),(1,1),(0,1)]:
-            points.append( 
-                ( x*f + dx*f, y*f + dy*f, -0.05 ))
+            polygon.append( 
+                ( x*f + dx*f, y*f + dy*f, z*f ))
+
+        for s in [0]:
+            colors.append( pygame.Color(world.get_at( (x,y) )).lerp('black',0.5)  )
+            polygon = list()
+            polygons.append(polygon)
+            for dx, dy, dz in [(0,0,0),(1,0,0),(1,0,-1),(0,0,-1)]:
+                polygon.append( 
+                    ( x*f + dx*f, y*f + dy*f, z*f+dz*f ))
+
+l = list(zip(polygons,colors))
+
+l.sort( key=lambda a:a[0][0][2]+a[0][1][2]+a[0][2][2]+a[0][3][2])
 
 #colors = [
 #    hash(str(i)) for i in range( len(points)//4 )
 #]
 
+print(l)
 
-points = np.array(points)
+polygons = [ c[0] for c in l ]
+colors = [ c[1] for c in l ]
+
+polygons = np.array(polygons)
+b = 0.16
+polygons -= (b,b,0)
 colors = np.array(colors)
 
 def rotate( vertices, axis, theta ):
@@ -76,16 +101,28 @@ def filter_projected_polygons_out_of_view(projected_polygons, colors):
     return pp[ mask ], colors[ mask ]
 
 
+def filter_polygons_based_on_near( polygons, offset, colors, camera_vector ):
+    return polygons, colors
+    mask = np.logical_and( 
+        #(polygons-(list(offset)+[0]))[:,0].dot( camera_vector ) > -0.1 ,
+        True,
+        (polygons-(list(offset)+[0]))[:,0].dot( camera_vector ) < -0.025 ,
+    )
+    return polygons[mask], colors[mask]
 
-def projection( lpoints, colors, offset, theta ):
+def projection( polygons, colors, offset, theta ):
 
+    camera_vector = [math.sin(theta), math.cos(theta),0]
+    polygons, colors = filter_polygons_based_on_near( polygons, offset, colors, camera_vector )
 
-    lpoints = lpoints[ ( lpoints - (0,0,0) ).dot( (1,0,0) ) > 4.5 ]
+    lpoints = polygons.reshape( len(polygons)*4, 3 )
+
+    #lpoints = lpoints[ ( lpoints - (0,0,0) ).dot( (1,0,0) ) > 0 ]
 
     points = lpoints - ( *offset, 0 )
     rotate( points, (0,0,1), -theta)
 
-    if 1:
+    if 0:
         polygons = points.reshape( len(points)//4, 4, 3 )
         projected_polygons = (polygons[:,:,:2])
     else:
@@ -119,6 +156,8 @@ while running:
         if pygame.key.get_pressed()[k]:
             camera_position += np.array( [math.sin(camera_angle), math.cos(camera_angle)]  ) * 0.01 * delta
 
+
+
     for k, delta in (
         (pygame.K_a,1),  
         (pygame.K_d,-1),  
@@ -128,9 +167,11 @@ while running:
 
 
     camera_vector = pygame.math.Vector2( [math.sin(camera_angle), math.cos(camera_angle)] )
+    #camera_position += (0.16,0.16)
+    camera_position = camera_vector * 0.4
 
     jk = time.time()
-    projected_polygons, filtered_colors = projection( points, colors, camera_position, camera_angle )
+    projected_polygons, filtered_colors = projection( polygons, colors, camera_position, camera_angle )
     #print(jk-time.time())
     
     screen.fill("black")
@@ -147,7 +188,7 @@ while running:
 
     pygame.display.flip()
 
-    clock.tick(600)
+    clock.tick(60)
     print(clock.get_fps())
 
 
