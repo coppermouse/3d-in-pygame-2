@@ -51,6 +51,8 @@ def make_environment():
                 for dx, dy, dz in offsets:
                     polygon.append(( (x+dx)*f, (y+dy)*f, (z+dz)*f ))
 
+    colors = [ tuple(c)[:3] for c in colors ]
+
     return polygons, colors
 
 
